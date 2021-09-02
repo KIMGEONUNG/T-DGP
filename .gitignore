@@ -8,3 +8,4 @@ logs*
 event*
 *.npy
 *.pth
+datasets
