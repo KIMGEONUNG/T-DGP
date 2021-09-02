@@ -28,6 +28,7 @@ python -u -W ignore example.py \
 --resolution 256 \
 --weights_root pretrained \
 --load_weights 256 \
+--case_id 2 \
 --G_ch 96 --D_ch 96 \
 --G_shared \
 --hier --dim_z 120 --shared_dim 128 \

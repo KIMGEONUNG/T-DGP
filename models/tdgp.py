@@ -40,6 +40,9 @@ class T_DGP(object):
         self.select_num = config['select_num']
         self.factor = 2 if self.mode == 'hybrid' else 4  # Downsample factor
 
+        # T_DGP
+        self.case_id = config['case_id']
+
         # create model
         self.G = models.Generator(**config).cuda()
         self.D = models.Discriminator(
@@ -106,12 +109,43 @@ class T_DGP(object):
 
         self.z_b = torch.zeros((1, self.G.dim_z)).normal_().cuda()
         self.z_b = Variable(self.z_b, requires_grad=True)
-        self.z_b_optim = torch.optim.Adam(
-            [{'params': self.z_b, 'lr': self.z_lrs[0]}],
-            betas=(self.config['G_B1'], self.config['G_B2']),
-            weight_decay=0,
-            eps=1e-8
-        )
+
+    def _prepare_latent_f(self):
+        self.target_layer = 3
+
+        if self.case_id == 4:
+            f_target = self.G.forward_to_f(self.z, self.G.shared(self.y),
+                    target_layer=self.target_layer)
+
+            self.feature_mid = f_target
+
+            self.feature_mid = Variable(self.feature_mid, requires_grad=True)
+            self.feature_mid_optim = torch.optim.Adam(
+                [{'params': self.feature_mid, 'lr': self.z_lrs[0]}],
+                betas=(self.config['G_B1'], self.config['G_B2']),
+                weight_decay=0,
+                eps=1e-8
+            )
+
+        if self.case_id == 5:
+            f_target = self.G.forward_to_f(self.z, self.G.shared(self.y),
+                    target_layer=self.target_layer)
+
+            theta_inv = self._get_inverse_theta(self.theta)
+            f_target_t = self._transform_with_theta(f_target, theta_inv)
+
+            f_border = self.G.forward_to_f(self.z_b, self.G.shared(self.y),
+                    target_layer=self.target_layer)
+
+            self.feature_mid = self._merge(f_target_t, f_border)
+
+            self.feature_mid = Variable(self.feature_mid, requires_grad=True)
+            self.feature_mid_optim = torch.optim.Adam(
+                [{'params': self.feature_mid, 'lr': self.z_lrs[0]}],
+                betas=(self.config['G_B1'], self.config['G_B2']),
+                weight_decay=0,
+                eps=1e-8
+            )
 
     def reset_G(self):
         self.G.load_state_dict(self.G_weight, strict=False)
@@ -169,6 +203,10 @@ class T_DGP(object):
         return merged
 
     def run(self, save_interval=None):
+
+        if self.case_id in [4, 5]:
+            self._prepare_latent_f()
+
         save_imgs = self.target.clone()
         save_imgs2 = save_imgs.cpu().clone()
         loss_dict = {}
@@ -190,10 +228,10 @@ class T_DGP(object):
                     self.G.optim.zero_grad()
 
                 #################################
-                if False: # Naive GDP
+                if self.case_id in [1]:
                     x = self.G(self.z, self.G.shared(self.y), use_in=self.use_in[stage])
 
-                if False: # warp-only
+                if self.case_id in [2]:
                     target_layer = 3
                     f_target = self.G.forward_to_f(self.z, self.G.shared(self.y), 
                             target_layer=target_layer, use_in=self.use_in[stage])
@@ -204,7 +242,7 @@ class T_DGP(object):
                     x = self.G.forward_from_f(self.z, f_target_t, self.G.shared(self.y), 
                             target_layer=target_layer, use_in=self.use_in[stage])
 
-                if True: # warp+borderpack
+                if self.case_id in [3]:
                     target_layer = 3
                     f_target = self.G.forward_to_f(self.z, self.G.shared(self.y), 
                             target_layer=target_layer, use_in=self.use_in[stage])
@@ -218,6 +256,12 @@ class T_DGP(object):
                     f = self._merge(f_target_t, f_border)
 
                     x = self.G.forward_from_f(self.z, f, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+
+                if self.case_id in [4, 5]:
+                    target_layer = 3
+                    self.feature_mid_optim.zero_grad()
+                    x = self.G.forward_from_f(self.z, self.feature_mid, self.G.shared(self.y), 
                             target_layer=target_layer, use_in=self.use_in[stage])
                 #################################
 
@@ -235,6 +279,9 @@ class T_DGP(object):
                     mse_loss * self.config['w_mse'][stage] + \
                     nll * self.config['w_nll']
                 loss.backward()
+
+                if self.case_id in [4, 5]:
+                    self.feature_mid_optim.step()
 
                 self.z_optim.step()
                 if self.update_G:
@@ -318,6 +365,11 @@ class T_DGP(object):
                 self.z, '%s/z_%s_%s.pth' %
                 (self.config['exp_path'], self.img_name, self.mode))
         return loss_dict
+
+    def SELECT_Z(self, select_y=False):
+        if self.case_id in [3, 4]:
+            self.SELECT_Z_BORDER(select_y)
+        self.SELECT_Z_TARGET(select_y)
 
     def SELECT_Z_TARGET(self, select_y=False):
         with torch.no_grad():

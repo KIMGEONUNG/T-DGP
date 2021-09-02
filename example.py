@@ -26,6 +26,9 @@ def add_example_parser(parser):
     parser.add_argument(
         '--class2', type=int, default=-1,
         help='class index of the 2nd image, used in "morphing" mode (default: %(default)s)')
+    parser.add_argument(
+        '--case_id', type=int, default=5,
+        help='ablation case (default: %(default)s)')
     return parser
 
 
@@ -53,19 +56,20 @@ if not os.path.exists('{}/images_sheet'.format(config['exp_path'])):
 
 path_img = config['image_path']
 path_theta = path_img.replace('img_t', 'theta').replace('jpg', 'pkl')
+case_id = config['case_id']
+print('case id:', case_id)
+
 # initialize DGP model
 tdgp = T_DGP(config)
-
 
 # prepare the target image
 img = utils.get_img(path_img, config['resolution']).cuda()
 category = torch.Tensor([config['class']]).long().cuda()
-theta =  get_theta(path_theta)
+theta = get_theta(path_theta)
 tdgp.SET_TARGET(img, category, theta, config['image_path'])
 
 # prepare initial latent vector
-tdgp.SELECT_Z_BORDER(select_y=True if config['class'] < 0 else False)
-tdgp.SELECT_Z_TARGET(select_y=True if config['class'] < 0 else False)
+tdgp.SELECT_Z(select_y=True if config['class'] < 0 else False)
 
 # start reconstruction
 loss_dict = tdgp.run()
