@@ -189,7 +189,6 @@ class T_DGP(object):
                 if self.update_G:
                     self.G.optim.zero_grad()
 
-
                 #################################
                 if False: # Naive GDP
                     x = self.G(self.z, self.G.shared(self.y), use_in=self.use_in[stage])
@@ -221,7 +220,6 @@ class T_DGP(object):
                     x = self.G.forward_from_f(self.z, f, self.G.shared(self.y), 
                             target_layer=target_layer, use_in=self.use_in[stage])
                 #################################
-
 
                 # apply degradation transform
                 x_map = self.pre_process(x, False)
