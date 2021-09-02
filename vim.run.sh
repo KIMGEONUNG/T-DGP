@@ -19,7 +19,7 @@ python -u -W ignore example.py \
 --w_D_loss 1 1 1 1 1 \
 --w_nll 0.02 \
 --w_mse 0 0 0 0 0 \
---select_num 100 \
+--select_num 500 \
 --sample_std 0.5 \
 --iterations 200 200 300 400 300 \
 --G_lrs 5e-5 5e-5 5e-5 5e-5 2e-5 \

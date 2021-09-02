@@ -151,6 +151,23 @@ class T_DGP(object):
         self.y.fill_(category.item())
         self.img_name = img_path[img_path.rfind('/') + 1:img_path.rfind('.')]
 
+    def _get_inverse_theta(self, theta):
+        a = torch.tensor([0., 0., 1.]).to(theta.device)
+        a = a.expand(theta.size()[0], 3)
+        a = a.view(theta.size()[0], 1, 3)
+        a = torch.cat([theta, a], dim=1)
+        a = a.inverse()
+        a = a[:, :2, :]
+
+        return a
+
+    def _merge(self, target, border):
+        mask = target == torch.zeros_like(target)
+        border_hat = mask * border
+        merged = border_hat + target
+
+        return merged
+
     def run(self, save_interval=None):
         save_imgs = self.target.clone()
         save_imgs2 = save_imgs.cpu().clone()
@@ -171,7 +188,41 @@ class T_DGP(object):
                 self.z_optim.zero_grad()
                 if self.update_G:
                     self.G.optim.zero_grad()
-                x = self.G(self.z, self.G.shared(self.y), use_in=self.use_in[stage])
+
+
+                #################################
+                if False: # Naive GDP
+                    x = self.G(self.z, self.G.shared(self.y), use_in=self.use_in[stage])
+
+                if False: # warp-only
+                    target_layer = 3
+                    f_target = self.G.forward_to_f(self.z, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+
+                    theta_inv = self._get_inverse_theta(self.theta)
+                    f_target_t = self._transform_with_theta(f_target, theta_inv)
+
+                    x = self.G.forward_from_f(self.z, f_target_t, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+
+                if True: # warp+borderpack
+                    target_layer = 3
+                    f_target = self.G.forward_to_f(self.z, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+
+                    theta_inv = self._get_inverse_theta(self.theta)
+                    f_target_t = self._transform_with_theta(f_target, theta_inv)
+
+                    f_border = self.G.forward_to_f(self.z_b, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+
+                    f = self._merge(f_target_t, f_border)
+
+                    x = self.G.forward_from_f(self.z, f, self.G.shared(self.y), 
+                            target_layer=target_layer, use_in=self.use_in[stage])
+                #################################
+
+
                 # apply degradation transform
                 x_map = self.pre_process(x, False)
 
