@@ -8,7 +8,10 @@ import torch.nn.functional as F
 import torchvision
 from PIL import Image
 from skimage import color
-from skimage.measure import compare_psnr, compare_ssim
+
+from skimage.metrics import peak_signal_noise_ratio as compare_psnr
+from skimage.metrics import structural_similarity as compare_ssim
+
 from torch.autograd import Variable
 
 import models
