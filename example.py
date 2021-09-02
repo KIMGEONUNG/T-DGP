@@ -67,10 +67,5 @@ tdgp.SET_TARGET(img, category, theta, config['image_path'])
 tdgp.SELECT_Z_BORDER(select_y=True if config['class'] < 0 else False)
 tdgp.SELECT_Z_TARGET(select_y=True if config['class'] < 0 else False)
 
-print(tdgp.z)
-print(tdgp.z_b)
-
-exit()
-
 # start reconstruction
 loss_dict = tdgp.run()
