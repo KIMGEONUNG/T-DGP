@@ -9,3 +9,4 @@ event*
 *.npy
 *.pth
 datasets
+*.png

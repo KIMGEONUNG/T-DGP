@@ -3,8 +3,12 @@
 WORK_PATH=$(dirname $0)
 IMAGE_PATH=${1:-datasets/img_t/10/0000000.jpg}
 CLASS=${2:-10} # set CLASS=-1 if you don't know the class
-#IMAGE_PATH=data/ILSVRC2012_val_00004291.JPEG
-#CLASS=442
+CASE=${3}
+
+echo autogen.sh started
+echo arg1: $IMAGE_PATH
+echo arg2: $CLASS
+echo arg3: $CASE
 
 python -u -W ignore example.py \
 --exp_path $WORK_PATH \
@@ -28,7 +32,7 @@ python -u -W ignore example.py \
 --resolution 256 \
 --weights_root pretrained \
 --load_weights 256 \
---case_id 5 \
+--case_id $CASE \
 --G_ch 96 --D_ch 96 \
 --G_shared \
 --hier --dim_z 120 --shared_dim 128 \

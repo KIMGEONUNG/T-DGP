@@ -367,7 +367,7 @@ class T_DGP(object):
         return loss_dict
 
     def SELECT_Z(self, select_y=False):
-        if self.case_id in [3, 4]:
+        if self.case_id in [3, 5]:
             self.SELECT_Z_BORDER(select_y)
         self.SELECT_Z_TARGET(select_y)
 
